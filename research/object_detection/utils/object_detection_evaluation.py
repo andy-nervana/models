@@ -857,6 +857,10 @@ class ObjectDetectionEvaluation(object):
       mean_ap = metrics.compute_average_precision(precision, recall)
     else:
       mean_ap = np.nanmean(self.average_precision_per_class)
+
+    import ipdb
+    ipdb.set_trace()
+    
     mean_corloc = np.nanmean(self.corloc_per_class)
     return ObjectDetectionEvalMetrics(
         self.average_precision_per_class, mean_ap, self.precisions_per_class,

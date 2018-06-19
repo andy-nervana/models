@@ -46,6 +46,7 @@ def build_input(tfrecord_paths):
   image_tensor = tf.image.decode_image(encoded_image, channels=3)
   image_tensor.set_shape([None, None, 3])
   image_tensor = tf.expand_dims(image_tensor, 0)
+  image_tensor = tf.tile(image_tensor, [8, 1, 1, 1])
 
   return serialized_example_tensor, image_tensor
 
@@ -65,7 +66,7 @@ def build_inference_graph(image_tensor, inference_graph_path):
     detected_labels_tensor: Detected labels. Int64 tensor,
         shape=[num_detections]
   """
-  with tf.gfile.Open(inference_graph_path, 'r') as graph_def_file:
+  with tf.gfile.Open(inference_graph_path, 'rb') as graph_def_file:
     graph_content = graph_def_file.read()
   graph_def = tf.GraphDef()
   graph_def.MergeFromString(graph_content)
@@ -75,22 +76,27 @@ def build_inference_graph(image_tensor, inference_graph_path):
 
   g = tf.get_default_graph()
 
-  num_detections_tensor = tf.squeeze(
-      g.get_tensor_by_name('num_detections:0'), 0)
+  # num_detections_tensor = tf.squeeze(
+  #     g.get_tensor_by_name('num_detections:0'), 0)
+  num_detections_tensor = g.get_tensor_by_name('num_detections:0')
   num_detections_tensor = tf.cast(num_detections_tensor, tf.int32)
 
-  detected_boxes_tensor = tf.squeeze(
-      g.get_tensor_by_name('detection_boxes:0'), 0)
-  detected_boxes_tensor = detected_boxes_tensor[:num_detections_tensor]
+  # detected_boxes_tensor = tf.squeeze(
+  #     g.get_tensor_by_name('detection_boxes:0'), 0)
+  detected_boxes_tensor = g.get_tensor_by_name('detection_boxes:0')
+  # detected_boxes_tensor = detected_boxes_tensor[:num_detections_tensor]
 
-  detected_scores_tensor = tf.squeeze(
-      g.get_tensor_by_name('detection_scores:0'), 0)
-  detected_scores_tensor = detected_scores_tensor[:num_detections_tensor]
+  # detected_scores_tensor = tf.squeeze(
+  #     g.get_tensor_by_name('detection_scores:0'), 0)
+  detected_scores_tensor = g.get_tensor_by_name('detection_scores:0')
+  # detected_scores_tensor = detected_scores_tensor[:num_detections_tensor]
 
-  detected_labels_tensor = tf.squeeze(
-      g.get_tensor_by_name('detection_classes:0'), 0)
+  # detected_labels_tensor = tf.squeeze(
+  #     g.get_tensor_by_name('detection_classes:0'), 0)
+
+  detected_labels_tensor = g.get_tensor_by_name('detection_classes:0')
   detected_labels_tensor = tf.cast(detected_labels_tensor, tf.int64)
-  detected_labels_tensor = detected_labels_tensor[:num_detections_tensor]
+  # detected_labels_tensor = detected_labels_tensor[:num_detections_tensor]
 
   return detected_boxes_tensor, detected_scores_tensor, detected_labels_tensor
 
@@ -139,3 +145,52 @@ def infer_detections_and_add_to_example(
     del feature[standard_fields.TfExampleFields.image_encoded]
 
   return tf_example
+
+
+def infer_detections(
+    serialized_example_tensor, detected_boxes_tensor, detected_scores_tensor,
+    detected_labels_tensor, discard_image_pixels):
+  """Runs the supplied tensors and adds the inferred detections to the example.
+
+  Args:
+    serialized_example_tensor: Serialized TF example. Scalar string tensor
+    detected_boxes_tensor: Detected boxes. Float tensor,
+        shape=[num_detections, 4]
+    detected_scores_tensor: Detected scores. Float tensor,
+        shape=[num_detections]
+    detected_labels_tensor: Detected labels. Int64 tensor,
+        shape=[num_detections]
+    discard_image_pixels: If true, discards the image from the result
+  Returns:
+    The de-serialized TF example augmented with the inferred detections.
+  """
+  tf_example = tf.train.Example()
+  (serialized_example, detected_boxes, detected_scores,
+   detected_classes) = tf.get_default_session().run([
+       serialized_example_tensor, detected_boxes_tensor, detected_scores_tensor,
+       detected_labels_tensor
+   ])
+  detected_boxes = detected_boxes.T
+
+  # import ipdb
+  # ipdb.set_trace()
+
+  # tf_example.ParseFromString(serialized_example)
+  # feature = tf_example.features.feature
+  # feature[standard_fields.TfExampleFields.
+  #         detection_score].float_list.value[:] = detected_scores
+  # feature[standard_fields.TfExampleFields.
+  #         detection_bbox_ymin].float_list.value[:] = detected_boxes[0]
+  # feature[standard_fields.TfExampleFields.
+  #         detection_bbox_xmin].float_list.value[:] = detected_boxes[1]
+  # feature[standard_fields.TfExampleFields.
+  #         detection_bbox_ymax].float_list.value[:] = detected_boxes[2]
+  # feature[standard_fields.TfExampleFields.
+  #         detection_bbox_xmax].float_list.value[:] = detected_boxes[3]
+  # feature[standard_fields.TfExampleFields.
+  #         detection_class_label].int64_list.value[:] = detected_classes
+
+  # if discard_image_pixels:
+  #   del feature[standard_fields.TfExampleFields.image_encoded]
+
+  return detected_boxes

@@ -320,7 +320,12 @@ def create_ssd_anchors(num_layers=6,
       range(num_layers), scales[:-1], scales[1:]):
     layer_box_specs = []
     if layer == 0 and reduce_boxes_in_lowest_layer:
-      layer_box_specs = [(0.1, 1.0), (scale, 2.0), (scale, 0.5)]
+      layer_box_specs =  [(0.02, 1.0), (0.02, 2.0), (0.02, 0.5), 
+                          (0.035, 2.0), (0.035, 0.5),
+                          (0.075, 1.0), (0.075, 2.0), (0.075, 0.5),
+                          (0.1, 2.0), (0.1, 0.5)]
+      
+      # layer_box_specs = [(0.1, 1.0), (scale, 2.0), (scale, 0.5)]
     else:
       for aspect_ratio in aspect_ratios:
         layer_box_specs.append((scale, aspect_ratio))

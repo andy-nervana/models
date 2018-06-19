@@ -19,11 +19,8 @@ from __future__ import division
 from __future__ import print_function
 
 import math
-import time
 
 import tensorflow as tf
-
-from official.transformer.utils import dataset
 
 
 _TRAIN, _EVAL = tf.estimator.ModeKeys.TRAIN, tf.estimator.ModeKeys.EVAL
@@ -123,7 +120,6 @@ class Manager(object):
 
     Args:
       num_epochs: An integer of the number of epochs to convert to steps.
-      batch_size: The mini-batch size used.
       mode: The estimator ModeKey of the computation
 
     Returns:
@@ -132,20 +128,3 @@ class Manager(object):
     assert self.use_tpu, "epochs_to_steps should only be reached when using TPU"
     total_num_tokens = NUM_EXAMPLES[mode] * self.max_length * num_epochs
     return total_num_tokens // self.batch_size
-
-  def _sleep_if_tpu(self):
-    """Sleep for a minute if TPUs are used.
-
-    There is currently an issue with TPUs where starting a train or evaluation
-    before all of the TPU queues have cleared causes the TPU to freeze. This
-    is a temporary workaround until the issue can be properly resolved.
-    """
-    if self.use_tpu:
-      tf.logging.info("Sleeping to allow TPU queues to clear.")
-      time.sleep(60)
-
-  def post_train(self):
-    self._sleep_if_tpu()
-
-  def post_eval(self):
-    self._sleep_if_tpu()

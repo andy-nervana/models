@@ -1,5 +1,6 @@
 # USAGE:
-#   python train_script.py TRAIN_FILE EVAL_FILE TRAIN_DIRECTORY EVAL_DIRECTORY CONFIG_FILE
+#   python train_script.py train_args.txt MODEL_PATH
+
 import os
 import sys
 
@@ -22,9 +23,10 @@ def step_mod(num_steps, file_in, file_out=None):
             f.write(line)
 
 def main():
-    assert len(sys.argv) == 2 # INSUFFICIENT ARGUMENTS
+    assert len(sys.argv) == 3 # INSUFFICIENT ARGUMENTS, USAGE: $python train_script.py train_args.txt MODEL_PATH
 
     arg_file = sys.argv[1]
+    model_path = sys.argv[2]
 
     with open(arg_file, 'r') as f:
         args = f.readlines()
@@ -51,6 +53,9 @@ def main():
     train_command = 'python ' + train_file + ' --logtostderr --pipeline_config_path=' + config_file + ' --train_dir=' + train_dir
     eval_command = 'python ' + eval_file + ' --logtostderr --pipeline_config_path=' + config_file + ' --checkpoint_dir=' + train_dir + ' --eval_dir=' + eval_dir + '  --run_once True' 
 
+    initial_path = os.getcwd()
+    os.chdir(model_path)
+
     i = 0
     while i < max_steps:
         i += chunk_size
@@ -59,6 +64,8 @@ def main():
         # os.system("python /nfs/site/home/tareknas/models/research/object_detection/eval.py --logtostderr --pipeline_config_path=pipeline.config --checkpoint_dir=train/ --eval_dir=eval/ --run_once True")
         os.system(train_command)
         os.system(eval_command)
+    
+    os.chdir(initial_path)
 
 if __name__ == '__main__':
     main()

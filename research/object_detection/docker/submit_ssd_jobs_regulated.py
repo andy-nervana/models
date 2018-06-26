@@ -33,7 +33,7 @@ def submit_job(batch, env_dict):
         job_dict['metadata']['labels'][k] = v.replace('/', 'S')[-60:] # Add parameter to the job label
         job_dict['spec']['template']['metadata']['labels'][k] = v.replace('/', 'S')[-60:] # Add parameter to the pod label
 
-    resp = batch.create_namespaced_job(body=job_dict, namespace='takeller')
+    resp = batch.create_namespaced_job(body=job_dict, namespace='tareknas')
     logger.info("Job submitted with parameters: {}".format(', '.join(["{}:{}".format(setting['name'], setting['value']) for setting in env_dict])))
     # print(resp) # Uncomment for debugging failed jobs
 
@@ -47,7 +47,9 @@ if __name__ == '__main__':
 
     param_settings = [
       {'CONFIG_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/pipeline.config',
-       'TRAIN_PATH' :  models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/train/'},
+       'TRAIN_PATH' :  models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/train/',
+       'EVAL_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/eval/',
+       'MODEL_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/'},
 
       # {'CONFIG_PATH' : models_dir + 'ssd_mobilenet_v2_coco_focal_2018_6_6/pipeline.config',
       #  'TRAIN_PATH' :  models_dir + 'ssd_mobilenet_v2_coco_focal_2018_6_6/train/'},

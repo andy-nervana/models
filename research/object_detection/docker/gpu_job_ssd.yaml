@@ -1,9 +1,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  generateName: andys-gpu-ssd-job-
+  generateName: tarek-gpu-ssd-job-
   labels:
-      type: andys_ssd_model_exploration
+      type: tarek_ssd_model_exploration
 spec:
   template:
     metadata:
@@ -48,5 +48,5 @@ spec:
       volumes:
       - nfs:
           server: fmcfs05n02b-03.fm.intel.com
-          path: "/nrv_algo_home01/takeller" # Unfortunately this has to be a specific home directory (and not all home directories)
+          path: "/nrv_algo_home01/tareknas" # Unfortunately this has to be a specific home directory (and not all home directories)
         name: nfs

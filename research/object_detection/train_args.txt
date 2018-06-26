@@ -1,0 +1,7 @@
+/nfs/site/home/tareknas/models/research/object_detection/train.py
+/nfs/site/home/tareknas/models/research/object_detection/eval.py
+train/
+eval/
+pipeline.config
+400000
+50000

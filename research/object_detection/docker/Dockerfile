@@ -72,4 +72,5 @@ ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/local/cuda-8.0/lib64:/usr/local/cud
 CMD protoc /mnt/repo/models/research/object_detection/protos/*.proto --python_out=.
 CMD export PYTHONPATH=$PYTHONPATH:/mnt/repo/models/research/:/mnt/repo/models/research/slim
 # CMD python3 /mnt/repo/models/research/object_detection/train.py --logtostderr --pipeline_config_path=$CONFIG_PATH --train_dir=$TRAIN_PATH
+CMD python train_script.py train_args.txt ${MODEL_PATH}
 CMD python -c "import time; time.sleep(1000)"

@@ -26,6 +26,8 @@ def submit_job(batch, env_dict):
     # Also we want to add it to the job and pods labels
     for pair in env_dict:
         k,v = pair['name'], pair['value']
+        k = k[-60:]
+        v = v[-60:]
         assert isinstance(v, (str, bytes))
         job_dict['metadata']['labels'][k] = v # Add parameter to the job label
         job_dict['spec']['template']['metadata']['labels'][k] = v # Add parameter to the pod label

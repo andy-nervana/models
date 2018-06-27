@@ -33,7 +33,7 @@ def submit_job(batch, env_dict):
         job_dict['metadata']['labels'][k] = v.replace('/', 'S')[-60:] # Add parameter to the job label
         job_dict['spec']['template']['metadata']['labels'][k] = v.replace('/', 'S')[-60:] # Add parameter to the pod label
 
-    resp = batch.create_namespaced_job(body=job_dict, namespace='tareknas')
+    resp = batch.create_namespaced_job(body=job_dict, namespace='ailab-users-tareknas')
     logger.info("Job submitted with parameters: {}".format(', '.join(["{}:{}".format(setting['name'], setting['value']) for setting in env_dict])))
     # print(resp) # Uncomment for debugging failed jobs
 
@@ -43,13 +43,14 @@ if __name__ == '__main__':
     v1 = client.CoreV1Api()
     logger.info("Connected to cluster")
 
-    models_dir = '/mnt/repo/models/research/object_detection/ferrari/models/'
+    # models_dir = '/mnt/repo/models/research/object_detection/ferrari/models/'
+    models_dir = '/dataset/TF_models/current_ssd_models'
 
     param_settings = [
       {'CONFIG_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/pipeline.config',
        'TRAIN_PATH' :  models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/train/',
        'EVAL_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/eval/',
-       'MODEL_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/'},
+       'MODEL_PATH' : models_dir + 'ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_noSigmoid'},
 
       # {'CONFIG_PATH' : models_dir + 'ssd_mobilenet_v2_coco_focal_2018_6_6/pipeline.config',
       #  'TRAIN_PATH' :  models_dir + 'ssd_mobilenet_v2_coco_focal_2018_6_6/train/'},

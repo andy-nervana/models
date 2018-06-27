@@ -2,7 +2,6 @@ import time
 import logging
 import random
 import string
-from copy import copy
 
 import yaml
 from kubernetes import client, config
@@ -21,20 +20,18 @@ def submit_job(batch, env_dict):
         env_dict: list of dicts where each dict is of the form name:<name>, value:<value> these will get added to the
             containers environment variables and pod and job labels
     """
-    job_dict = yaml.load(open('gpu_job_ssd.yaml'))
-
     # Add parameter to containers environment variables
-    job_dict['spec']['template']['spec']['containers'][0]['env'] += env_dict
+    job_dict['spec']['template']['spec']['containers'][0]['env'].extend(env_dict)
 
     # Also we want to add it to the job and pods labels
     for pair in env_dict:
         k,v = pair['name'], pair['value']
         assert isinstance(v, (str, bytes))
-        job_dict['metadata']['labels'][k] = v.replace('/', 'S')[-60:] # Add parameter to the job label
-        job_dict['spec']['template']['metadata']['labels'][k] = v.replace('/', 'S')[-60:] # Add parameter to the pod label
+        job_dict['metadata']['labels'][k] = v # Add parameter to the job label
+        job_dict['spec']['template']['metadata']['labels'][k] = v # Add parameter to the pod label
 
-    resp = batch.create_namespaced_job(body=job_dict, namespace='ailab-users-tareknas')
-    logger.info("Job submitted with parameters: {}".format(', '.join(["{}:{}".format(setting['name'], setting['value']) for setting in env_dict])))
+    resp = batch.create_namespaced_job(body=job_dict, namespace='default')
+    logger.info("Job submitted")
     # print(resp) # Uncomment for debugging failed jobs
 
 if __name__ == '__main__':
@@ -43,39 +40,16 @@ if __name__ == '__main__':
     v1 = client.CoreV1Api()
     logger.info("Connected to cluster")
 
-    # models_dir = '/mnt/repo/models/research/object_detection/ferrari/models/'
+
+    job_dict = yaml.load(open('gpu_job_ssd.yaml'))
+
     models_dir = '/dataset/TF_models/current_ssd_models'
-
-    param_settings = [
-      {'CONFIG_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/pipeline.config',
-       'TRAIN_PATH' :  models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/train/',
-       'EVAL_PATH' : models_dir + 'ssd_mobilenet_v2_coco_2018_6_6/eval/',
-       'MODEL_PATH' : models_dir + 'ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_noSigmoid'},
-
-      # {'CONFIG_PATH' : models_dir + 'ssd_mobilenet_v2_coco_focal_2018_6_6/pipeline.config',
-      #  'TRAIN_PATH' :  models_dir + 'ssd_mobilenet_v2_coco_focal_2018_6_6/train/'},
-
-      # {'CONFIG_PATH' : models_dir + 'ssdlite_mobilenet_v2_coco_2018_6_6/pipeline.config',
-      #  'TRAIN_PATH' :  models_dir + 'ssdlite_mobilenet_v2_coco_2018_6_6/train/'},
-
-      # {'CONFIG_PATH' : models_dir + 'ssdlite_mobilenet_v2_coco_focal_2018_6_6/pipeline.config',
-      #  'TRAIN_PATH' :  models_dir + 'ssdlite_mobilenet_v2_coco_focal_2018_6_6/train/'},
-
-      # {'CONFIG_PATH' : models_dir + 'ssd_inception_v2_coco_2018_6_6/pipeline.config',
-      #  'TRAIN_PATH' :  models_dir + 'ssd_inception_v2_coco_2018_6_6/train/'},
-
-      # {'CONFIG_PATH' : models_dir + 'ssd_inception_v2_coco_focal_2018_6_6/pipeline.config',
-      #  'TRAIN_PATH' :  models_dir + 'ssd_inception_v2_coco_focal_2018_6_6/train/'},
-
-      # {'CONFIG_PATH' : models_dir + 'faster_rcnn_inception_v2_coco_2018_6_6/pipeline.config',
-      #  'TRAIN_PATH' :  models_dir + 'faster_rcnn_inception_v2_coco_2018_6_6/train/'},
-
-      # {'CONFIG_PATH' : models_dir + 'faster_rcnn_resnet101_kitti_2018_6_6/pipeline.config',
-      #  'TRAIN_PATH' :  models_dir + 'faster_rcnn_resnet101_kitti_2018_6_6/train/'}
-    ]
+    models = ['ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_noSigmoid']
 
     ## CHANGE THESE VALUES
-    in_flight_count = 40
+    param_key = 'MODEL_PATH'
+    params = [models_dir + model for model in models]
+    in_flight_count = 10
     sleep_time = 10
     ## /CHANGE THESE VALUES
 
@@ -88,16 +62,14 @@ if __name__ == '__main__':
         live_job_count = len([job for job in jobs.items if job.status.succeeded is None])
         logger.info("Found %d jobs with label %s", live_job_count, label_selector)
         for i in range(in_flight_count - live_job_count):
-            params = param_settings.pop()
-            env_dict = [dict(name=p_key, value=str(p_val)) for p_key, p_val in params.items()] + [dict(name='jobid', value=job_id)]
-            
-            logger.warn("Submitting job for param{}".format(', '.join(["{}:{}".format(setting['name'], setting['value']) for setting in env_dict])))
+            param = str(params.pop())
+            env_dict = [dict(name=param_key, value=param),
+                        dict(name='jobid', value=job_id)]
+            logger.warn("Submitting job for param %s", param)
             submit_job(batch, env_dict)
-            if len(param_settings) == 0:
+            if len(params) == 0:
                 done = True
                 break
-        
         logger.info("Sleeping for %d", sleep_time)
         time.sleep(sleep_time)
-
-logger.info("All jobs done, to clean up your jobs and pods, run `kubectl delete jobs,pods -l jobid=%s`", job_id)
+    logger.info("All jobs done, to clean up your jobs and pods, run `kubectl delete jobs,pods -l jobid=%s`", job_id)

@@ -30,7 +30,7 @@ def submit_job(batch, env_dict):
         job_dict['metadata']['labels'][k] = v # Add parameter to the job label
         job_dict['spec']['template']['metadata']['labels'][k] = v # Add parameter to the pod label
 
-    resp = batch.create_namespaced_job(body=job_dict, namespace='default')
+    resp = batch.create_namespaced_job(body=job_dict, namespace='ailab-users-tareknas')
     logger.info("Job submitted")
     # print(resp) # Uncomment for debugging failed jobs
 

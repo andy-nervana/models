@@ -59,7 +59,7 @@ RUN pip install pip --upgrade && pip3 install pip --upgrade
 # RUN pip3 install -r /tmp/requirements.txt
 RUN pip install tensorflow-gpu==1.5.0 tensorflow-tensorboard Cython pillow lxml jupyter matplotlib
 
-RUN apt-get -y install python3-tk 
+#RUN apt-get -y install python3-tk 
 
 # add source code
 ADD . /root/src
@@ -72,5 +72,5 @@ ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/local/cuda-8.0/lib64:/usr/local/cud
 CMD protoc /mnt/repo/models/research/object_detection/protos/*.proto --python_out=.
 CMD export PYTHONPATH=$PYTHONPATH:/mnt/repo/models/research/:/mnt/repo/models/research/slim
 # CMD python3 /mnt/repo/models/research/object_detection/train.py --logtostderr --pipeline_config_path=$CONFIG_PATH --train_dir=$TRAIN_PATH
-CMD python train_script.py train_args.txt ${MODEL_PATH}
+CMD python /nfs/site/home/tareknas/models/research/object_detection/train_script.py train_args.txt ${MODEL_PATH}
 CMD python -c "import time; time.sleep(1000)"

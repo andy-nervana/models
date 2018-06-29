@@ -26,13 +26,11 @@ def submit_job(batch, env_dict):
     # Also we want to add it to the job and pods labels
     for pair in env_dict:
         k,v = pair['name'], pair['value']
-        k = k[-60:]
-        v = v[-60:]
         assert isinstance(v, (str, bytes))
         job_dict['metadata']['labels'][k] = v # Add parameter to the job label
         job_dict['spec']['template']['metadata']['labels'][k] = v # Add parameter to the pod label
 
-    resp = batch.create_namespaced_job(body=job_dict, namespace='ailab-users-tareknas')
+    resp = batch.create_namespaced_job(body=job_dict, namespace='default')
     logger.info("Job submitted")
     # print(resp) # Uncomment for debugging failed jobs
 
@@ -45,13 +43,14 @@ if __name__ == '__main__':
 
     job_dict = yaml.load(open('gpu_job_ssd.yaml'))
 
-    models_dir = '/dataset/TF_models/current_ssd_models'
+    ## CHANGE THESE VALUES
+    models_dir = '/dataset/TF_models/current_ssd_models' # change this, this should be /workspace/...
     models = ['ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_noSigmoid']
 
-    ## CHANGE THESE VALUES
     param_key = 'MODEL_PATH'
     params = [models_dir + model for model in models]
-    in_flight_count = 10
+
+    in_flight_count = 2
     sleep_time = 10
     ## /CHANGE THESE VALUES
 

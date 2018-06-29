@@ -15,12 +15,12 @@ spec:
       restartPolicy: Never
       containers:
       - name: gpu-container
-        image: nervana-dockrepo01.fm.intel.com:5001/tarek_ssd_model_exploration:test_01
+        image: nervana-dockrepo01.fm.intel.com:5001/tarek_ssd_model_exploration:test_12
         tty: true
         stdin: true
         resources:
           limits:
-            nvidia.com/gpu: 0 # requesting 0 GPUs by default
+            nvidia.com/gpu: 1 # requesting 0 GPUs by default
         volumeMounts:
         - mountPath: "/dataset"
           name: dataset

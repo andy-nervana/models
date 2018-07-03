@@ -15,13 +15,13 @@ spec:
       restartPolicy: Never
       containers:
       - name: gpu-container
-        image: nervana-dockrepo01.fm.intel.com:5001/tarek_ssd_model_exploration:test_13
-        command: ["sh", "-c", "echo Processing item $ITEM && sleep 5"]
+        image: nervana-dockrepo01.fm.intel.com:5001/tarek_ssd_model_exploration:test_15
+        command: ["bash", "-c", "echo Processing item $ITEM && sleep 50000"]
         tty: true
         stdin: true
         resources:
           limits:
-            nvidia.com/gpu: 0 # requesting 0 GPUs by default
+            nvidia.com/gpu: 1 # requesting 0 GPUs by default
         env:
         - name: yoohoo
           value: "hellos"

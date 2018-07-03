@@ -30,7 +30,7 @@ def submit_job(batch, env_dict):
         job_dict['metadata']['labels'][k] = v # Add parameter to the job label
         job_dict['spec']['template']['metadata']['labels'][k] = v # Add parameter to the pod label
 
-    resp = batch.create_namespaced_job(body=job_dict, namespace='default')
+    resp = batch.create_namespaced_job(body=job_dict, namespace='ailab-users-tareknas')
     logger.info("Job submitted")
     # print(resp) # Uncomment for debugging failed jobs
 
@@ -41,11 +41,13 @@ if __name__ == '__main__':
     logger.info("Connected to cluster")
 
 
-    job_dict = yaml.load(open('gpu_job_ssd.yaml'))
+    job_dict = yaml.load(open('gpu_job.yaml'))
 
     ## CHANGE THESE VALUES
-    models_dir = '/dataset/TF_models/current_ssd_models' # change this, this should be /workspace/...
-    models = ['ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_noSigmoid']
+    # models_dir = '/dataset/TF_models/current_ssd_models/' # change this, this should be /workspace/...
+    models_dir = ''
+    #models = ['ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_noSigmoid']
+    models = [' ']
 
     param_key = 'MODEL_PATH'
     params = [models_dir + model for model in models]

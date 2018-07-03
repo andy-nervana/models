@@ -64,5 +64,4 @@ CMD protoc /mnt/repo/models/research/object_detection/protos/*.proto --python_ou
 # CMD export PYTHONPATH=$PYTHONPATH:/mnt/repo/models/research/:/mnt/repo/models/research/slim
 # CMD export PYTHONPATH=$PYTHONPATH:/home/models/research/:/home/models/research/slim
 
-# CMD mkdir testing123
-CMD python -c "import time; time.sleep(100000)"
+# CMD python -c "import time; time.sleep(100000)"

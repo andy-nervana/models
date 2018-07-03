@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: tarek-gpu-ssd-job-
+  labels:
+    type: training
+spec:
+  template:
+    metadata:
+      name: training-gpu
+      labels:
+        type: training
+    spec:
+      hostIPC: true
+      restartPolicy: Never
+      containers:
+      - name: gpu-container
+        image: nervana-dockrepo01.fm.intel.com:5001/tarek_ssd_model_exploration:test_13
+        command: ["sh", "-c", "echo Processing item $ITEM && sleep 5"]
+        tty: true
+        stdin: true
+        resources:
+          limits:
+            nvidia.com/gpu: 0 # requesting 0 GPUs by default
+        env:
+        - name: yoohoo
+          value: "hellos"
+        volumeMounts:
+        - mountPath: "/dataset"
+          name: dataset
+        - mountPath: "/public"
+          name: public
+        - mountPath: "/workspace"
+          name: internal-workspace
+        - mountPath: "/home"
+          name: home
+        envFrom:
+        - configMapRef:
+            name: proxy-config
+      tolerations:
+      - key: "group"
+        operator: "Equal"
+        value: "anil"
+      volumes:
+      - name: dataset
+        persistentVolumeClaim:
+          claimName: dataset
+      - name: public
+        persistentVolumeClaim:
+          claimName: public
+      - name: internal-workspace
+        persistentVolumeClaim:
+          claimName: internal-workspace
+      - name: home
+        persistentVolumeClaim:
+          claimName: home

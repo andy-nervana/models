@@ -861,8 +861,11 @@ class ObjectDetectionEvaluation(object):
     else:
       mean_ap = np.nanmean(self.average_precision_per_class)
 
-    import ipdb
-    ipdb.set_trace()
+    # import ipdb
+    # ipdb.set_trace()
+    
+    with open('ode_results.txt', 'a') as f:
+      f.write('mAp: ' + str(mean_ap) + '\n')
     
     mean_corloc = np.nanmean(self.corloc_per_class)
     return ObjectDetectionEvalMetrics(

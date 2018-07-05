@@ -3,11 +3,12 @@
 
 import os
 import sys
+import time
 
 def step_mod(num_steps, file_in, file_out=None):
 
     if file_out == None:
-        file_out = file_in
+        file_out = 'pipeline.config'
 
     with open(file_in, 'r') as f:
         x = f.readlines()
@@ -17,6 +18,8 @@ def step_mod(num_steps, file_in, file_out=None):
             num_steps_index = i
 
     x[num_steps_index] = '  num_steps: ' + str(num_steps) + '\n'
+    # import pdb; pdb.set_trace()
+
 
     with open(file_out, 'w') as f:
         for line in x:
@@ -50,8 +53,11 @@ def main():
     max_steps = int(args[5])
     chunk_size = int(args[6])
 
-    train_command = 'python ' + train_file + ' --logtostderr --pipeline_config_path=' + config_file + ' --train_dir=' + train_dir
-    eval_command = 'python ' + eval_file + ' --logtostderr --pipeline_config_path=' + config_file + ' --checkpoint_dir=' + train_dir + ' --eval_dir=' + eval_dir + '  --run_once True' 
+    # train_command = 'python ' + train_file + ' --logtostderr --pipeline_config_path=' + config_file + ' --train_dir=' + train_dir
+    # eval_command = 'python ' + eval_file + ' --logtostderr --pipeline_config_path=' + config_file + ' --checkpoint_dir=' + train_dir + ' --eval_dir=' + eval_dir + '  --run_once True' 
+
+    train_command = 'python ' + train_file + ' --logtostderr --pipeline_config_path=' + 'pipeline.config' + ' --train_dir=' + train_dir
+    eval_command = 'python ' + eval_file + ' --logtostderr --pipeline_config_path=' + 'pipeline.config' + ' --checkpoint_dir=' + train_dir + ' --eval_dir=' + eval_dir + '  --run_once True'
 
     initial_path = os.getcwd()
     os.chdir(model_path)
@@ -62,7 +68,12 @@ def main():
         step_mod(i, config_file)
         # os.system("python /nfs/site/home/tareknas/models/research/object_detection/train.py --logtostderr --pipeline_config_path=pipeline.config --train_dir=train/")
         # os.system("python /nfs/site/home/tareknas/models/research/object_detection/eval.py --logtostderr --pipeline_config_path=pipeline.config --checkpoint_dir=train/ --eval_dir=eval/ --run_once True")
+        print("TRAINING TO " + str(i) + " STEPS.")
         os.system(train_command)
+        time.sleep(15)
+        print("STARTING EVAL")
+        with open('ode_results.txt', 'a') as f:
+            f.write('STEPS: ' + str(i) + ' ')
         os.system(eval_command)
     
     os.chdir(initial_path)

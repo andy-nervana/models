@@ -16,7 +16,7 @@ spec:
       containers:
       - name: gpu-container
         image: nervana-dockrepo01.fm.intel.com:5001/tarek_ssd_model_exploration:type_01
-        command: ["bash", "-c", "echo Processing item $ITEM && sleep 50000"]
+        command: ["bash", "-c"]
         tty: true
         stdin: true
         resources:

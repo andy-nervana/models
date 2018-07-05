@@ -15,7 +15,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
-def submit_job(batch, env_dict):
+def submit_job(batch, env_dict, command):
     """
     Submit a job to the cluster.
     Params:
@@ -26,7 +26,8 @@ def submit_job(batch, env_dict):
     # Add parameter to containers environment variables
     job_dict['spec']['template']['spec']['containers'][0]['env'].extend(env_dict)
 
-    job_dict['spec']['template']['spec']['containers'][0]['command'].append('echo yo yo yo >> zzFromSubmit.txt')
+    current_cmd = job_dict['spec']['template']['spec']['containers'][0]['command'] 
+    job_dict['spec']['template']['spec']['containers'][0]['command'] = current_cmd + command
 
     b_dict = yaml.load(open('gpu_job.yaml'))
     # Also we want to add it to the job and pods labels
@@ -54,7 +55,16 @@ if __name__ == '__main__':
     #params = [10, 20, 30]
 
     param_key = 'MODEL_PATH'
-    params = ['yo yo this works']
+    params = ['blah blah']
+
+    train_cmd = 'python /home/models/research/object_detection/train_script.py /home/models/research/object_detection/train_args.txt .'
+    model_dir = '/workspace/'
+
+    models = ['01_ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_foc_a010_g500',
+             '02_ssd_mobilenet_v2_coco_cotafix_lr050_dr05_ds30k_512_foc_a025_b200']
+    models = [model_dir + model for model in models]
+
+    commands = [['cd ' + model, train_cmd] for model in models]
 
     in_flight_count = 1
     sleep_time = 5
@@ -69,12 +79,14 @@ if __name__ == '__main__':
         live_job_count = len([job for job in jobs.items if job.status.succeeded is None])
         logger.info("Found %d jobs with label %s", live_job_count, label_selector)
         for i in range(in_flight_count - live_job_count):
-            param = str(params.pop())
-            env_dict = [dict(name=param_key, value=param),
-                        dict(name='jobid', value=job_id)]
-            logger.warn("Submitting job for param %s", param)
-            submit_job(batch, env_dict)
-            if len(params) == 0:
+            # param = str(params.pop())
+            command = commands.pop()
+            # env_dict = [dict(name=param_key, value=param),
+            #             dict(name='jobid', value=job_id)]
+            # logger.warn("Submitting job for param %s", param)
+            logger.warn("Submitting job for command " + str(command))
+            submit_job(batch, env_dict, command)
+            if len(command) == 0:
                 done = True
                 break
         logger.info("Sleeping for %d", sleep_time)

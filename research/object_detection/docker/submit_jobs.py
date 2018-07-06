@@ -6,7 +6,7 @@ import string
 import yaml
 from kubernetes import client, config
 
-from aikube import set_environment_variable
+# from aikube import set_environment_variable
 import urllib3; urllib3.disable_warnings()
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
-def submit_job(batch, env_dict, command):
+def submit_job(batch, command):
     """
     Submit a job to the cluster.
     Params:
@@ -24,12 +24,14 @@ def submit_job(batch, env_dict, command):
             containers environment variables and pod and job labels
     """
     # Add parameter to containers environment variables
-    job_dict['spec']['template']['spec']['containers'][0]['env'].extend(env_dict)
-
-    current_cmd = job_dict['spec']['template']['spec']['containers'][0]['command'] 
-    job_dict['spec']['template']['spec']['containers'][0]['command'] = current_cmd + command
+    # job_dict['spec']['template']['spec']['containers'][0]['env'].extend(env_dict)
 
     b_dict = yaml.load(open('gpu_job.yaml'))
+
+    current_cmd = b_dict['spec']['template']['spec']['containers'][0]['command'] 
+    b_dict['spec']['template']['spec']['containers'][0]['command'] = current_cmd + command
+    # b_dict['spec']['template']['spec']['containers'][0]['args'] = ['-c'] + command
+
     # Also we want to add it to the job and pods labels
     #for pair in env_dict:
     #    k,v = pair['name'], pair['value']
@@ -37,7 +39,7 @@ def submit_job(batch, env_dict, command):
     #    job_dict['metadata']['labels'][k] = v # Add parameter to the job label
     #    job_dict['spec']['template']['metadata']['labels'][k] = v # Add parameter to the pod label
 
-    resp = batch.create_namespaced_job(body=job_dict, namespace='ailab-users-tareknas')
+    resp = batch.create_namespaced_job(body=b_dict, namespace='ailab-users-tareknas')
     logger.info("Job submitted")
     # print(resp) # Uncomment for debugging failed jobs
 
@@ -64,9 +66,9 @@ if __name__ == '__main__':
              '02_ssd_mobilenet_v2_coco_cotafix_lr050_dr05_ds30k_512_foc_a025_b200']
     models = [model_dir + model for model in models]
 
-    commands = [['cd ' + model, train_cmd] for model in models]
+    commands = [["cd " + model + "; " + train_cmd] for model in models]
 
-    in_flight_count = 1
+    in_flight_count = 5
     sleep_time = 5
     ## /CHANGE THESE VALUES
 
@@ -85,7 +87,7 @@ if __name__ == '__main__':
             #             dict(name='jobid', value=job_id)]
             # logger.warn("Submitting job for param %s", param)
             logger.warn("Submitting job for command " + str(command))
-            submit_job(batch, env_dict, command)
+            submit_job(batch, command)
             if len(command) == 0:
                 done = True
                 break

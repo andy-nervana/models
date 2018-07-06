@@ -59,16 +59,15 @@ if __name__ == '__main__':
     param_key = 'MODEL_PATH'
     params = ['blah blah']
 
-    train_cmd = 'python /home/models/research/object_detection/train_script.py /home/models/research/object_detection/train_args.txt .'
+    train_cmd = 'python /home/models/research/object_detection/train_script.py /home/models/research/object_detection/train_args.txt '
     model_dir = '/workspace/'
 
     models = ['01_ssd_mobilenet_v2_coco_cotafix_lr015_dr05_ds20k_512_foc_a010_g500',
              '02_ssd_mobilenet_v2_coco_cotafix_lr050_dr05_ds30k_512_foc_a025_b200']
     models = [model_dir + model for model in models]
+    commands = [[train_cmd + model] for model in models]
 
-    commands = [["cd " + model + "; " + train_cmd] for model in models]
-
-    in_flight_count = 5
+    in_flight_count = 10
     sleep_time = 5
     ## /CHANGE THESE VALUES
 
@@ -88,7 +87,7 @@ if __name__ == '__main__':
             # logger.warn("Submitting job for param %s", param)
             logger.warn("Submitting job for command " + str(command))
             submit_job(batch, command)
-            if len(command) == 0:
+            if len(commands) == 0:
                 done = True
                 break
         logger.info("Sleeping for %d", sleep_time)

@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import subprocess
 
 def step_mod(num_steps, file_in, file_out=None):
 
@@ -69,13 +70,20 @@ def main():
         # os.system("python /nfs/site/home/tareknas/models/research/object_detection/train.py --logtostderr --pipeline_config_path=pipeline.config --train_dir=train/")
         # os.system("python /nfs/site/home/tareknas/models/research/object_detection/eval.py --logtostderr --pipeline_config_path=pipeline.config --checkpoint_dir=train/ --eval_dir=eval/ --run_once True")
         print("TRAINING TO " + str(i) + " STEPS.")
-        os.system(train_command)
+        # subprocess.call(train_command.split())
+
+        process = subprocess.Popen(train_command.split(), stdout=subprocess.PIPE)
+        train_output, train_error = process.communicate()
+
         time.sleep(15)
         print("STARTING EVAL")
         with open('ode_results.txt', 'a') as f:
             f.write('STEPS: ' + str(i) + ' ')
-        os.system(eval_command)
-    
+
+        subprocess.call(eval_command.split())
+        process = subprocess.Popen(train_command.split(), stdout=subprocess.PIPE)
+        eval_output, eval_error = process.communicate()
+
     os.chdir(initial_path)
 
 if __name__ == '__main__':

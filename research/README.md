@@ -22,6 +22,7 @@ request.
     for visual navigation.
 -   [compression](compression): compressing and decompressing images using a
     pre-trained Residual GRU network.
+-   [deep_speech](deep_speech): automatic speech recognition.
 -   [deeplab](deeplab): deep labeling for semantic image segmentation.
 -   [delf](delf): deep local features for image matching and retrieval.
 -   [differential_privacy](differential_privacy): differential privacy for training
@@ -59,6 +60,8 @@ request.
 -   [rebar](rebar): low-variance, unbiased gradient estimates for discrete
     latent variable models.
 -   [resnet](resnet): deep and wide residual networks.
+-   [seq2species](seq2species): deep learning solution for read-level taxonomic
+    classification.
 -   [skip_thoughts](skip_thoughts): recurrent neural network sentence-to-vector
     encoder.
 -   [slim](slim): image classification models in TF-Slim.

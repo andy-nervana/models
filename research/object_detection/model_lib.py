@@ -99,7 +99,7 @@ def unstack_batch(tensor_dict, unpad_groundtruth_tensors=True):
   """Unstacks all tensors in `tensor_dict` along 0th dimension.
 
   Unstacks tensor from the tensor dict along 0th dimension and returns a
-  tensor_dict containing values that are lists of unstacked tensors.
+  tensor_dict containing values that are lists of unstacked, unpadded tensors.
 
   Tensors in the `tensor_dict` are expected to be of one of the three shapes:
   1. [batch_size]
@@ -202,6 +202,10 @@ def create_model_fn(detection_model_fn, configs, hparams, use_tpu=False):
     params = params or {}
     total_loss, train_op, detections, export_outputs = None, None, None, None
     is_training = mode == tf.estimator.ModeKeys.TRAIN
+
+    # Make sure to set the Keras learning phase. True during training,
+    # False for inference.
+    tf.keras.backend.set_learning_phase(is_training)
     detection_model = detection_model_fn(is_training=is_training,
                                          add_summaries=(not use_tpu))
     scaffold_fn = None
@@ -244,8 +248,9 @@ def create_model_fn(detection_model_fn, configs, hparams, use_tpu=False):
     preprocessed_images = features[fields.InputDataFields.image]
     prediction_dict = detection_model.predict(
         preprocessed_images, features[fields.InputDataFields.true_image_shape])
-    detections = detection_model.postprocess(
-        prediction_dict, features[fields.InputDataFields.true_image_shape])
+    if mode in (tf.estimator.ModeKeys.EVAL, tf.estimator.ModeKeys.PREDICT):
+      detections = detection_model.postprocess(
+          prediction_dict, features[fields.InputDataFields.true_image_shape])
 
     if mode == tf.estimator.ModeKeys.TRAIN:
       if train_config.fine_tune_checkpoint and hparams.load_pretrained:
@@ -278,7 +283,7 @@ def create_model_fn(detection_model_fn, configs, hparams, use_tpu=False):
     if mode in (tf.estimator.ModeKeys.TRAIN, tf.estimator.ModeKeys.EVAL):
       losses_dict = detection_model.loss(
           prediction_dict, features[fields.InputDataFields.true_image_shape])
-      losses = [loss_tensor for loss_tensor in losses_dict.itervalues()]
+      losses = [loss_tensor for loss_tensor in losses_dict.values()]
       if train_config.add_regularization_loss:
         regularization_losses = tf.get_collection(
             tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -399,7 +404,8 @@ def create_model_fn(detection_model_fn, configs, hparams, use_tpu=False):
             keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours)
         scaffold = tf.train.Scaffold(saver=saver)
 
-    if use_tpu:
+    # EVAL executes on CPU, so use regular non-TPU EstimatorSpec.
+    if use_tpu and mode != tf.estimator.ModeKeys.EVAL:
       return tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode,
           scaffold_fn=scaffold_fn,
@@ -490,6 +496,7 @@ def create_estimator_and_inputs(run_config,
       hparams,
       train_steps=train_steps,
       eval_steps=eval_steps,
+      retain_original_images_in_eval=False if use_tpu else True,
       **kwargs)
   model_config = configs['model']
   train_config = configs['train_config']
@@ -497,11 +504,13 @@ def create_estimator_and_inputs(run_config,
   eval_config = configs['eval_config']
   eval_input_config = configs['eval_input_config']
 
-  if train_steps is None:
-    train_steps = configs['train_config'].num_steps
+  # update train_steps from config but only when non-zero value is provided
+  if train_steps is None and train_config.num_steps != 0:
+    train_steps = train_config.num_steps
 
-  if eval_steps is None:
-    eval_steps = configs['eval_config'].num_examples
+  # update eval_steps from config but only when non-zero value is provided
+  if eval_steps is None and eval_config.num_examples != 0:
+    eval_steps = eval_config.num_examples
 
   detection_model_fn = functools.partial(
       model_builder.build, model_config=model_config)
@@ -519,8 +528,10 @@ def create_estimator_and_inputs(run_config,
       eval_config=eval_config,
       eval_input_config=train_input_config,
       model_config=model_config)
-  predict_input_fn = create_predict_input_fn(model_config=model_config)
+  predict_input_fn = create_predict_input_fn(
+      model_config=model_config, predict_input_config=eval_input_config)
 
+  tf.logging.info('create_estimator_and_inputs: use_tpu %s', use_tpu)
   model_fn = model_fn_creator(detection_model_fn, configs, hparams, use_tpu)
   if use_tpu_estimator:
     estimator = tf.contrib.tpu.TPUEstimator(
@@ -530,6 +541,7 @@ def create_estimator_and_inputs(run_config,
         eval_batch_size=num_shards * 1 if use_tpu else 1,
         use_tpu=use_tpu,
         config=run_config,
+        # TODO(lzc): Remove conditional after CMLE moves to TF 1.9
         params=params if params else {})
   else:
     estimator = tf.estimator.Estimator(model_fn=model_fn, config=run_config)

@@ -300,12 +300,7 @@ def resnet_model_fn(features, labels, mode, model_class,
   else:
     train_op = None
 
-  if not tf.contrib.distribute.has_distribution_strategy():
-    accuracy = tf.metrics.accuracy(labels, predictions['classes'])
-  else:
-    # Metrics are currently not compatible with distribution strategies during
-    # training. This does not affect the overall performance of the model.
-    accuracy = (tf.no_op(), tf.constant(0))
+  accuracy = tf.metrics.accuracy(labels, predictions['classes'])
 
   metrics = {'accuracy': accuracy}
 
@@ -338,6 +333,8 @@ def resnet_main(
     shape: list of ints representing the shape of the images used for training.
       This is only used if flags_obj.export_dir is passed.
   """
+
+  model_helpers.apply_clean(flags.FLAGS)
 
   # Using the Winograd non-fused algorithms provides a small performance boost.
   os.environ['TF_ENABLE_WINOGRAD_NONFUSED'] = '1'
@@ -385,6 +382,7 @@ def resnet_main(
 
   train_hooks = hooks_helper.get_train_hooks(
       flags_obj.hooks,
+      model_dir=flags_obj.model_dir,
       batch_size=flags_obj.batch_size)
 
   def input_fn_train():

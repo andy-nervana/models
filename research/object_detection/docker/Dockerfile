@@ -59,7 +59,9 @@ RUN pip install pip --upgrade && pip3 install pip --upgrade
 # RUN pip3 install -r /tmp/requirements.txt
 RUN pip install tensorflow-gpu==1.5.0 tensorflow-tensorboard Cython pillow lxml jupyter matplotlib
 
-RUN apt-get -y install python3-tk 
+# RUN apt-get install python-support
+# RUN update-python-modules -a
+# RUN apt-get -y install python3-tk 
 
 # add source code
 ADD . /root/src

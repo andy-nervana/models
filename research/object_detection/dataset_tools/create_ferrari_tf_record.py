@@ -13,13 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 
-r"""Convert raw PASCAL dataset to TFRecord for object_detection.
+r"""Convert the Ferrari dataset to TFRecord for object_detection.
 
 Example usage:
-    python object_detection/dataset_tools/create_pascal_tf_record.py \
-        --data_dir=/home/user/VOCdevkit \
-        --year=VOC2012 \
-        --output_path=/home/user/pascal.record
+    python object_detection/dataset_tools/create_ferrari_tf_record.py \
+        --data_dir=/dataset/CES_2018/SSD_Training_Data/All_Images/ \
+        --annotations_dir=/dataset/CES_2018/SSD_Training_Data/All_Labels/ \
+        --output_path=/dataset/TF_models/ferrari/
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -33,33 +33,28 @@ import os
 from lxml import etree
 import PIL.Image
 import tensorflow as tf
-import sys
-sys.path.append('../utils')
-import dataset_util
-import pickle
+import numpy as np
+from tqdm import tqdm
+
+from object_detection.utils import dataset_util
+from object_detection.utils import label_map_util
+
 
 flags = tf.app.flags
-flags.DEFINE_string('data_dir', '', 'Root directory to raw PASCAL VOC dataset.')
-flags.DEFINE_string('set', 'train', 'Convert training set, validation set or '
-                    'merged set.')
-flags.DEFINE_string('annotations_dir', 'All_Labels',
+flags.DEFINE_string('data_dir', '', 'Root directory to raw ferrari dataset.')
+flags.DEFINE_string('annotations_dir', 'Annotations',
                     '(Relative) path to annotations directory.')
-flags.DEFINE_string('year', 'VOC2007', 'Desired challenge year.')
 flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
-flags.DEFINE_string('label_map_path', 'data/pascal_label_map.pbtxt',
-                    'Path to label map proto')
+flags.DEFINE_float('val_split', 0.2, 'Percent of train to use for validation')
+
 flags.DEFINE_boolean('ignore_difficult_instances', False, 'Whether to ignore '
                      'difficult instances')
 FLAGS = flags.FLAGS
 
-SETS = ['train', 'val', 'trainval', 'test']
-#YEARS = ['VOC2007', 'VOC2012', 'merged']
-
-
 def dict_to_tf_example(data,
                        dataset_directory,
                        ignore_difficult_instances=False,
-                       image_subdirectory='All_Images'):
+                       image_subdirectory=''):
   """Convert XML derived dict to tf.Example proto.
 
   Notice that this function normalizes the bounding box coordinates provided
@@ -80,10 +75,18 @@ def dict_to_tf_example(data,
   Raises:
     ValueError: if the image pointed to by data['filename'] is not a valid JPEG
   """
-  #img_path = os.path.join(data['folder'], image_subdirectory, data['filename'])
-  full_path = os.path.join(dataset_directory, 'SSD_Training_Data','All_Images', data['filename'])
-  full_path = full_path.replace('_mp4', '.mp4')
-  if '.jpg' not in full_path: full_path = full_path + '.jpg'
+  # img_path = os.path.join(data['folder'], image_subdirectory, data['filename'].split('/')[-1])
+
+  if 'YUN' in data['filename']:
+    data['filename'] = data['filename'].replace('_mp4', '.mp4') + '.jpg'
+
+  img_path = data['filename']
+  full_path = os.path.join(dataset_directory, img_path)
+  
+  if not os.path.exists(full_path):
+    print("Cant find: {}".format(full_path))
+    return None
+
   with tf.gfile.GFile(full_path, 'rb') as fid:
     encoded_jpg = fid.read()
   encoded_jpg_io = io.BytesIO(encoded_jpg)
@@ -102,47 +105,29 @@ def dict_to_tf_example(data,
   classes = []
   classes_text = []
   truncated = []
-  #poses = []
+  poses = []
   difficult_obj = []
-  boxes = []
-
-  small_boxes_count = 0
+  names = []
 
   if 'object' in data:
     for obj in data['object']:
       difficult = bool(int(obj['difficult']))
       if ignore_difficult_instances and difficult:
         continue
-      nm = obj['name']
-      if nm.lower() == 'Other':
-          class_id = 1
-      else:
-          class_id = 1
-
-      xmin_norm = float(obj['bndbox']['xmin']) / width
-      ymin_norm = float(obj['bndbox']['ymin']) / height
-      xmax_norm = float(obj['bndbox']['xmax']) / width
-      ymax_norm = float(obj['bndbox']['ymax']) / height
-
-      # Skip boxes with size less than: 
-      if min(xmax_norm - xmin_norm, ymax_norm - ymin_norm) < 0.008:
-        small_boxes_count += 1
-        continue
 
       difficult_obj.append(int(difficult))
 
-      xmin.append(xmin_norm)
-      ymin.append(ymin_norm)
-      xmax.append(xmax_norm)
-      ymax.append(ymax_norm)
-
-      boxes.append([xmin[-1], ymin[-1], xmax[-1], ymax[-1]])
-
+      xmin.append(float(obj['bndbox']['xmin']) / width)
+      ymin.append(float(obj['bndbox']['ymin']) / height)
+      xmax.append(float(obj['bndbox']['xmax']) / width)
+      ymax.append(float(obj['bndbox']['ymax']) / height)
       # classes_text.append(obj['name'].encode('utf8'))
+      # classes.append(label_map_dict[obj['name']])
       classes_text.append('ferrari'.encode('utf8'))
-      classes.append(class_id)
+      classes.append(1)
       truncated.append(int(obj['truncated']))
-      #poses.append(obj['pose'].encode('utf8'))
+      # poses.append(obj['pose'].encode('utf8'))
+      names.append(obj['name'])
 
   example = tf.train.Example(features=tf.train.Features(feature={
       'image/height': dataset_util.int64_feature(height),
@@ -162,57 +147,64 @@ def dict_to_tf_example(data,
       'image/object/class/label': dataset_util.int64_list_feature(classes),
       'image/object/difficult': dataset_util.int64_list_feature(difficult_obj),
       'image/object/truncated': dataset_util.int64_list_feature(truncated),
-      #'image/object/view': dataset_util.bytes_list_feature(poses),
+      # 'image/object/view': dataset_util.bytes_list_feature(poses),
   }))
-
-  return example, boxes, small_boxes_count
+  return example, names
 
 
 def main(_):
-    if FLAGS.set not in SETS:
-        raise ValueError('set must be in : {}'.format(SETS))
+  # label_map_dict = label_map_util.get_label_map_dict(FLAGS.label_map_path)
 
-    data_dir = FLAGS.data_dir
+  np.random.seed(0)
+  examples_list = [x for x in os.listdir(FLAGS.annotations_dir) if x.endswith('.xml')]
 
-    writer = tf.python_io.TFRecordWriter(FLAGS.output_path)
+  num_examples = len(examples_list)
+  num_train = int(num_examples * (1.0 - FLAGS.val_split))
+  num_val = num_examples - num_train
 
-    all_boxes = []
-    all_small_boxes_count = 0
+  print("{} Examples total. {} Train -- {} Val".format(num_examples, num_train, num_val))
 
-    logging.info('Reading from Ferrari dataset.')
-    examples_path = os.path.join(data_dir, 'training_split_files', FLAGS.set + '.txt')
-    annotations_dir = os.path.join(data_dir, 'SSD_Training_Data', FLAGS.annotations_dir)
-    examples_list = dataset_util.read_examples_list(examples_path)
-    for idx, example in enumerate(examples_list):
-        if idx % 100 == 0:
-            logging.info('On image %d of %d', idx, len(examples_list))
-        path = os.path.join(annotations_dir, example + '.xml')
-        try:
-            path = path.replace('.mp4','_mp4')
-            with tf.gfile.GFile(path, 'rb') as fid:
-                xml_str = fid.read()
-        except:
-            import ipdb
-            ipdb.set_trace()
-        try:
-          xml = etree.fromstring(xml_str)
-        except:
-          import ipdb
-          ipdb.set_trace()
-        data = dataset_util.recursive_parse_xml_to_dict(xml)['annotation']
+  split_idxs = {}
+  split_idxs['val'] = list(np.random.choice(np.arange(num_examples), num_val))
+  split_idxs['train'] = list(set(np.arange(num_examples)).difference(split_idxs['val']))
 
-        tf_example, boxes, small_boxes_count = dict_to_tf_example(data, FLAGS.data_dir, FLAGS.ignore_difficult_instances)
-        writer.write(tf_example.SerializeToString())
-        all_boxes += boxes
-        all_small_boxes_count += small_boxes_count
+  all_names = []
 
-    writer.close()
+  for split in ['train', 'val']:
+    output_file = os.path.join(FLAGS.output_path, 'ferrari_{}.record'.format(split))
+    
+    # writer = tf.python_io.TFRecordWriter(output_file)
+
+    for idx in tqdm(split_idxs[split]):
+      example = examples_list[idx]
+      path = os.path.join(FLAGS.annotations_dir, example)
+      with tf.gfile.GFile(path, 'rb') as fid:
+        xml_str = fid.read()
+
+      try:
+        xml = etree.fromstring(xml_str)
+      except:
+        import ipdb
+        ipdb.set_trace()
+
+      data = dataset_util.recursive_parse_xml_to_dict(xml)['annotation']
+
+      tf_example, names = dict_to_tf_example(data, FLAGS.data_dir,
+                                      FLAGS.ignore_difficult_instances)
+
+      all_names.extend(names)
+
+      # if tf_example:
+      #   writer.write(tf_example.SerializeToString())
+
+    # writer.close()
+
+    set_names = set(all_names)
+    print(set_names)
 
     import ipdb
     ipdb.set_trace()
 
-    with open('{}_all_boxes.pkl'.format(FLAGS.set), 'wb') as f:
-      pickle.dump(all_boxes, f)
 
 if __name__ == '__main__':
   tf.app.run()

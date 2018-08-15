@@ -327,11 +327,10 @@ def write_graph_and_checkpoint(inference_graph_def,
 def _get_outputs_from_inputs(input_tensors, detection_model,
                              output_collection_name):
   inputs = tf.to_float(input_tensors)
-  preprocessed_inputs, true_image_shapes = detection_model.preprocess(inputs)
-  output_tensors = detection_model.predict(
-      preprocessed_inputs, true_image_shapes)
-  postprocessed_tensors = detection_model.postprocess(
-      output_tensors, true_image_shapes)
+  preprocessed_inputs, _true_image_shapes = detection_model.preprocess(inputs)
+  true_image_shapes = tf.tile(tf.expand_dims(tf.shape(preprocessed_inputs)[1:],0),[tf.shape(preprocessed_inputs)[0],1])
+  output_tensors = detection_model.predict(preprocessed_inputs, true_image_shapes)
+  postprocessed_tensors = detection_model.postprocess(output_tensors, true_image_shapes)
   return _add_output_tensor_nodes(postprocessed_tensors,
                                   output_collection_name)
 

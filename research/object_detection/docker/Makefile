@@ -1,4 +1,4 @@
-IMAGE=nervana-dockrepo01.fm.intel.com:5001/andys_ssd_model_exploration:test_23
+IMAGE=nervana-dockrepo01.fm.intel.com:5001/andys_ssd_model_exploration:test_24
 
 .PHONY: build run
 

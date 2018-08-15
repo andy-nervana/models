@@ -1,0 +1,7 @@
+/home/models/research/object_detection/train.py
+/home/models/research/object_detection/eval.py
+train/
+eval/
+pipeline.config_master
+400000
+30000

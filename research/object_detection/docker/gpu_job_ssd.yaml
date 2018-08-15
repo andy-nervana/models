@@ -19,7 +19,7 @@ spec:
         image: nervana-dockrepo01.fm.intel.com:5001/andys_ssd_model_exploration:test_24
         # command: ['sleep','infinity'] # for debugging (`kubectl create -f gpu_job.yaml` then `kubectl exec -it <pod name> -- bash`)
         securityContext: 
-          runAsUser: 11683559 # takeller id (try running `id`)
+          runAsUser: 11826255 # takeller id (try running `id`)
         resources:
           limits:
             nvidia.com/gpu: 1 # requesting 2 GPUs
